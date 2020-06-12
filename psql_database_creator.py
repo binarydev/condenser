@@ -68,7 +68,23 @@ class PsqlDatabaseCreator:
 
 
     def add_constraints(self):
-        pass
+        if self.use_existing_dump == True:
+            pass
+        else:
+            cur_path = os.getcwd()
+
+            pg_dump_path = get_pg_bin_path()
+            if pg_dump_path != '':
+                os.chdir(pg_dump_path)
+            connection = '--dbname=postgresql://{0}@{2}:{3}/{4}?{1}'.format(self.source_dbc.user, urllib.parse.urlencode({'password': self.source_dbc.password}), self.source_dbc.host, self.source_dbc.port, self.source_dbc.db_name)
+            result = subprocess.run(['pg_dump', connection, '--schema-only', '--no-owner', '--no-privileges', '--section=post-data']
+                    , stderr = subprocess.PIPE, stdout = subprocess.PIPE)
+            if result.returncode != 0 or contains_errors(result.stderr):
+                raise Exception('Captuing post-data schema failed. Details:\n{}'.format(result.stderr))
+
+            os.chdir(cur_path)
+
+            self.run_psql(result.stdout.decode('utf-8'))
 
     def __filter_commands(self, input):
 
